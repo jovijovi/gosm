@@ -94,10 +94,11 @@ const (
 type CurveID uint16
 
 const (
-	CurveP256 CurveID = 23
-	CurveP384 CurveID = 24
-	CurveP521 CurveID = 25
-	X25519    CurveID = 29
+	CurveP256   CurveID = 23
+	CurveP384   CurveID = 24
+	CurveP521   CurveID = 25
+	X25519      CurveID = 29
+	CureP256SM2 CurveID = 31
 )
 
 // TLS Elliptic Curve Point Formats
@@ -685,7 +686,7 @@ func (c *Config) maxVersion() uint16 {
 	return c.MaxVersion
 }
 
-var defaultCurvePreferences = []CurveID{X25519, CurveP256, CurveP384, CurveP521}
+var defaultCurvePreferences = []CurveID{X25519, CurveP256, CurveP384, CurveP521, CureP256SM2}
 
 func (c *Config) curvePreferences() []CurveID {
 	if c == nil || len(c.CurvePreferences) == 0 {

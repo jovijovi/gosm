@@ -7,9 +7,11 @@ package tls
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/subtle"
 	"crypto/x509"
+	"crypto/sm/sm2"
 	"encoding/asn1"
 	"errors"
 	"fmt"
@@ -228,6 +230,8 @@ Curves:
 			hs.ecdsaOk = true
 		case *rsa.PublicKey:
 			hs.rsaSignOk = true
+		case *sm2.PublicKey:
+			hs.ecdsaOk = true
 		default:
 			c.sendAlert(alertInternalError)
 			return false, fmt.Errorf("tls: unsupported signing key type (%T)", priv.Public())
@@ -555,8 +559,19 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 			if digest, _, err = hs.finishedHash.hashForClientCertificate(signatureAndHash, hs.masterSecret); err != nil {
 				break
 			}
-			if !ecdsa.Verify(key, digest, ecdsaSig.R, ecdsaSig.S) {
-				err = errors.New("tls: ECDSA verification failure")
+			switch key.Curve {
+			case elliptic.P256Sm2():
+				if !sm2.Verify(&sm2.PublicKey{
+					X:     key.X,
+					Y:     key.Y,
+					Curve: key.Curve,
+				}, digest, ecdsaSig.R, ecdsaSig.S) {
+					err = errors.New("tls: SM2 verification failure")
+				}
+			default:
+				if !ecdsa.Verify(key, digest, ecdsaSig.R, ecdsaSig.S) {
+					err = errors.New("tls: ECDSA verification failure")
+				}
 			}
 		case *rsa.PublicKey:
 			if signatureAndHash.signature != signatureRSA {

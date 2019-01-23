@@ -12,12 +12,13 @@ import (
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
+	"crypto/sm/sm2"
 	"encoding/asn1"
 	"errors"
 	"io"
 	"math/big"
 
-	"golang_org/x/crypto/curve25519"
+	"golang.org/x/crypto/curve25519"
 )
 
 var errClientKeyExchange = errors.New("tls: invalid ClientKeyExchange message")
@@ -165,6 +166,8 @@ func curveForCurveID(id CurveID) (elliptic.Curve, bool) {
 		return elliptic.P384(), true
 	case CurveP521:
 		return elliptic.P521(), true
+	case CureP256SM2:
+		return elliptic.P256Sm2(), true
 	default:
 		return nil, false
 	}
@@ -261,8 +264,9 @@ NextCandidate:
 	var sig []byte
 	switch ka.sigType {
 	case signatureECDSA:
-		_, ok := priv.Public().(*ecdsa.PublicKey)
-		if !ok {
+		_, ok1 := priv.Public().(*sm2.PublicKey)
+		_, ok2 := priv.Public().(*ecdsa.PublicKey)
+		if !ok1 && !ok2 {
 			return nil, errors.New("tls: ECDHE ECDSA requires an ECDSA server key")
 		}
 	case signatureRSA:
@@ -410,8 +414,19 @@ func (ka *ecdheKeyAgreement) processServerKeyExchange(config *Config, clientHell
 		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
 			return errors.New("tls: ECDSA signature contained zero or negative values")
 		}
-		if !ecdsa.Verify(pubKey, digest, ecdsaSig.R, ecdsaSig.S) {
-			return errors.New("tls: ECDSA verification failure")
+		switch pubKey.Curve {
+		case elliptic.P256Sm2():
+			if !sm2.Verify(&sm2.PublicKey{
+				X:     pubKey.X,
+				Y:     pubKey.Y,
+				Curve: pubKey.Curve,
+			}, digest, ecdsaSig.R, ecdsaSig.S) {
+				return errors.New("tls: SM2 verification failure")
+			}
+		default:
+			if !ecdsa.Verify(pubKey, digest, ecdsaSig.R, ecdsaSig.S) {
+				return errors.New("tls: ECDSA verification failure")
+			}
 		}
 	case signatureRSA:
 		pubKey, ok := cert.PublicKey.(*rsa.PublicKey)

@@ -11,6 +11,7 @@ import (
 	"crypto/rsa"
 	"crypto/subtle"
 	"crypto/x509"
+	"crypto/sm/sm2"
 	"errors"
 	"fmt"
 	"io"
@@ -312,7 +313,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		}
 
 		switch certs[0].PublicKey.(type) {
-		case *rsa.PublicKey, *ecdsa.PublicKey:
+		case *rsa.PublicKey, *ecdsa.PublicKey, *sm2.PublicKey:
 			break
 		default:
 			c.sendAlert(alertUnsupportedCertificate)
@@ -434,7 +435,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 
 		var signatureType uint8
 		switch key.Public().(type) {
-		case *ecdsa.PublicKey:
+		case *ecdsa.PublicKey, *sm2.PublicKey:
 			signatureType = signatureECDSA
 		case *rsa.PublicKey:
 			signatureType = signatureRSA

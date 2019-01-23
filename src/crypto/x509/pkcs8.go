@@ -37,7 +37,7 @@ func ParsePKCS8PrivateKey(der []byte) (key interface{}, err error) {
 		}
 		return key, nil
 
-	case privKey.Algo.Algorithm.Equal(oidPublicKeyECDSA), privKey.Algo.Algorithm.Equal(oidPublicKeySM2):
+	case privKey.Algo.Algorithm.Equal(oidPublicKeyECDSA):
 		bytes := privKey.Algo.Parameters.FullBytes
 		namedCurveOID := new(asn1.ObjectIdentifier)
 		if _, err := asn1.Unmarshal(bytes, namedCurveOID); err != nil {
@@ -49,6 +49,17 @@ func ParsePKCS8PrivateKey(der []byte) (key interface{}, err error) {
 		}
 		return key, nil
 
+	case privKey.Algo.Algorithm.Equal(oidPublicKeySM2):
+		bytes := privKey.Algo.Parameters.FullBytes
+		namedCurveOID := new(asn1.ObjectIdentifier)
+		if _, err := asn1.Unmarshal(bytes, namedCurveOID); err != nil {
+			namedCurveOID = nil
+		}
+		key, err = ParsePKCS8Sm2PrivateKey(der, nil)
+		if err != nil {
+			return nil, errors.New("x509: failed to parse SM2 private key embedded in PKCS#8: " + err.Error())
+		}
+		return key, nil
 	default:
 		return nil, fmt.Errorf("x509: PKCS#8 wrapping contained private key with unknown algorithm: %v", privKey.Algo.Algorithm)
 	}

@@ -7,7 +7,7 @@ package x509
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	sm "crypto/sm/sm2"
+	"crypto/sm/sm2"
 	"encoding/asn1"
 	"errors"
 	"fmt"
@@ -46,7 +46,7 @@ func MarshalECPrivateKey(key interface{}) ([]byte, error) {
 		curve = key.Curve
 		x = key.X
 		y = key.Y
-	case *sm.PrivateKey:
+	case *sm2.PrivateKey:
 		privateKeyBytes = key.D.Bytes()
 		curve = key.Curve
 		x = key.X
@@ -99,13 +99,13 @@ func parseECPrivateKey(namedCurveOID *asn1.ObjectIdentifier, der []byte) (key in
 	}
 
 	switch curve {
-	case elliptic.P256Sm2():
+	case elliptic.P256Sm2():    // TODO: need to confirm
 		k := new(big.Int).SetBytes(privKey.PrivateKey)
 		curveOrder := curve.Params().N
 		if k.Cmp(curveOrder) >= 0 {
 			return nil, errors.New("x509: invalid elliptic curve private key value")
 		}
-		priv := new(sm.PrivateKey)
+		priv := new(sm2.PrivateKey)
 		priv.Curve = curve
 		priv.D = k
 
